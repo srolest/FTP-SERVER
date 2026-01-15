@@ -1,0 +1,7 @@
+-- Mirror de Opensuse para 'sistema.sol'
+--
+-- Servidor anonimo
+-- Maximo de 200 conexiones activas simultaneas.
+-- Ancho de banda de 50KB por usuario
+-- Timeout de inactividad de 30 segundos
+--
