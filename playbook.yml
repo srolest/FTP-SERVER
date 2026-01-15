@@ -1,0 +1,51 @@
+---
+- name: Provisionamiento del Servidor FTP Anónimo
+  hosts: anonymousserver
+  become: yes
+  tasks:
+    - name: Actualizar repositorios
+      apt:
+        update_cache: yes
+
+    - name: Instalar el servidor vsftpd
+      apt:
+        name: vsftpd
+        state: present
+
+    - name: Crear directorios de configuración y datos
+      file:
+        path: "{{ item }}"
+        state: directory
+        mode: '0755'
+      loop:
+        - /etc/vsftpd
+        - /srv/ftp/anonimo
+
+    - name: Copiar el archivo de mensaje de bienvenida (banner_mensaje.txt)
+      copy:
+        src: files/banner_mensaje.txt
+        dest: /etc/vsftpd/banner_mensaje.txt
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Copiar la configuración principal (vsftpd.conf)
+      copy:
+        src: files/vsftpd.conf
+        dest: /etc/vsftpd.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Aplicar permisos de solo lectura a la carpeta anónima
+      file:
+        path: /srv/ftp/anonimo
+        state: directory
+        mode: '0555'
+        recurse: yes
+
+    - name: Reiniciar y asegurar que vsftpd esté activo
+      systemd:
+        name: vsftpd
+        state: restarted
+        enabled: yes
