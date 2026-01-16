@@ -1,6 +1,6 @@
 ---
 - name: Provisionamiento del Servidor FTP Anónimo
-  hosts: anonymousserver
+  hosts: anonymous_server
   become: yes
   tasks:
     - name: Actualizar repositorios

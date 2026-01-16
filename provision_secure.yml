@@ -1,0 +1,103 @@
+---
+- name: Provisionamiento Completo Servidor FTP Seguro
+  hosts: secure_server
+  become: yes
+  tasks:
+    # 1. Actualización e Instalación
+    - name: Actualizar repositorios e instalar paquetes necesarios
+      apt:
+        name:
+          - vsftpd
+          - openssl
+        state: present
+        update_cache: yes
+    
+    - name: Añadir registro en /etc/hosts para el servidor
+      lineinfile:
+        path: /etc/hosts
+        line: "10.112.11.10 ftp.example.test"
+        state: present
+
+    # 2. Copia de seguridad del config original
+    - name: Realizar copia de seguridad del archivo vsftpd.conf original
+      copy:
+        src: /etc/vsftpd.conf
+        dest: /etc/vsftpd.conf.bak
+        remote_src: yes 
+        force: no       
+
+    # 3. Creación de usuarios locales
+    - name: Crear usuarios locales (luis, maria, miguel)
+      user:
+        name: "{{ item }}"
+        password: "{{ '1234' | password_hash('sha512') }}"
+        shell: /bin/bash
+      loop:
+        - luis
+        - maria
+        - miguel
+
+    # 4. Creación de archivos de prueba (Requisito de la práctica)
+    - name: Crear archivos de texto para luis y maria
+      copy:
+        content: "Archivo de prueba de {{ item.propietario }}"
+        dest: "/home/{{ item.propietario }}/{{ item.archivo }}"
+        owner: "{{ item.propietario }}"
+        group: "{{ item.propietario }}"
+      loop:
+        - { propietario: 'luis', archivo: 'luis1.txt' }
+        - { propietario: 'luis', archivo: 'luis2.txt' }
+        - { propietario: 'maria', archivo: 'maria1.txt' }
+        - { propietario: 'maria', archivo: 'maria2.txt' }
+    
+
+    # 5. Generación del Certificado SSL (Directamente en la máquina)
+    - name: Generar certificado SSL autofirmado
+      command: >
+        openssl req -x509 -nodes -days 365 -newkey rsa:2048 
+        -keyout /etc/ssl/certs/example.test.pem 
+        -out /etc/ssl/certs/example.test.pem 
+        -subj "/C=ES/ST=Granada/L=Granada/O=IES/CN=ftp.example.test"
+      args:
+        creates: /etc/ssl/certs/example.test.pem 
+
+    - name: Asegurar que el directorio de configuracion existe
+      file:
+        path: /etc/vsftpd
+        state: directory
+        mode: '0755'
+
+    # 6. Preparar el archivo de excepciones (Maria libre)
+    - name: Copiar archivo de excepciones chroot
+      copy:
+        src: files-secure/chroot_list
+        dest: /etc/vsftpd/chroot_list
+
+    - name: Crear directorio para contenido anónimo
+      file:
+        path: /srv/ftp/anonimo
+        state: directory
+        owner: root
+        group: ftp
+        mode: '0755'
+
+    - name: Crear mensaje para anónimos (.message)
+      copy:
+        content: "---You have accessed the public directory server of 'sistema.sol'---"
+        dest: /srv/ftp/anonimo/.message
+
+    # 7. Aplicar tu archivo de configuración personalizado
+    - name: Copiar archivo de configuración vsftpd.conf desde files-secure
+      copy:
+        src: files-secure/vsftpd.conf
+        dest: /etc/vsftpd.conf
+        owner: root
+        group: root
+        mode: '0644'
+      notify: Reiniciar vsftpd
+
+  handlers:
+    - name: Reiniciar vsftpd
+      systemd:
+        name: vsftpd
+        state: restarted

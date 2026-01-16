@@ -9,7 +9,7 @@ Vagrant.configure("2") do |config|
     anonymousserver.vm.provision "ansible" do |ansible|
       ansible.playbook = "playbook.yml"
       ansible.groups = {
-        "anonymousserver" => ["anonymous_server"]
+        "anonymous_server" => ["anonymous_server"]
       }
     end
   end
@@ -19,6 +19,12 @@ Vagrant.configure("2") do |config|
     secureserver.vm.box = "generic/debian12"
     secureserver.vm.hostname = "secureserver"
     secureserver.vm.network "public_network", ip: "10.112.11.10", netmask: "255.255.0.0" 
-  end
 
+    secureserver.vm.provision "ansible" do |ansible|
+      ansible.playbook = "provision_secure.yml"
+      ansible.groups = {
+        "secure_server" => ["secure_server"]
+      }
+    end 
+  end 
 end
